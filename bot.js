@@ -5,16 +5,37 @@ const fs = require("fs");
 const util = require("util");
 const process = require("process");
 const audioconcat = require("audioconcat");
-const discordClient = new Discord.Client();
-const token = config.get("token");
-const projectId = "ultimate-message-master";
-const keyFilename = "./config/text-to-speech.json";
 
+// required files:
+/*
+ * // a blank audio file that will be appended to the end of the mp3
+ * // this is to fix an issue discord has closing the stream too early
+ * ./audio/blank.mp3
+ *
+ * // { "token": "DISCORD BOT TOKEN", "project_id": "GOOGLE PROJECT ID", "google_config_path": "GOOGLE'S PROJECT JSON" }
+ * ./config/default.json
+ *
+ * // { GOOGLE'S PROJECT JSON }
+ * .config/text-to-speech.json
+ *
+ */
+
+// the client we'll use to connect to discord
+const discordClient = new Discord.Client();
+
+// variables specific to this environment
+const token = config.get("token");
+const projectId = config.get("project_id");
+const keyFilename = config.get("google_config_path");
+const debug = config.get("debug");
+
+// the connection to Google for Text-to-Speech
 const ttsClient = new textToSpeech.TextToSpeechClient({
   projectId,
   keyFilename
 });
 
+// the arrays of voice types
 const australianFemaleVoices = [
   "en-AU-Standard-A",
   "en-AU-Standard-C",
@@ -57,20 +78,24 @@ const usMaleVoices = [
   "en-US-Wavenet-D"
 ];
 
+// users who have used the bot since it last booted up
 var userList = {};
 
+// messages that need to be sent
 const messageQueue = [];
 
 function queueMessage(msg, startsWithSay, startsWithS) {
-  console.log("Message: " + msg.content);
+  /// <summary>Queues a message that will be read out loud</summary>
+  if (debug) console.log("Message: " + msg.content);
 
   var voiceChoice = userList[msg.member.user.id]
     ? userList[msg.member.user.id]
     : { name: australianFemaleVoices[0], gender: "FEMALE" };
 
-  console.log(
-    `Language name: ${voiceChoice.name} Gender: ${voiceChoice.gender}`
-  );
+  if (debug)
+    console.log(
+      `Language name: ${voiceChoice.name} Gender: ${voiceChoice.gender}`
+    );
 
   var messageToSend;
 
@@ -82,7 +107,7 @@ function queueMessage(msg, startsWithSay, startsWithS) {
     messageToSend = msg.content.substr(2);
   }
 
-  console.log(messageQueue.length);
+  if (debug) console.log(messageQueue.length);
 
   if (messageQueue.length + 1 > 10) {
     msg.channel.sendMessage("The message queue is full.  Please wait a bit.");
@@ -97,6 +122,7 @@ function queueMessage(msg, startsWithSay, startsWithS) {
 }
 
 async function sendMessage() {
+  /// <summary>Loops through the queue of messages and sends them one at a time</summary>
   if (messageQueue.length > 0) {
     const voiceChannel = discordClient.channels.find("name", "VC 2");
 
@@ -136,7 +162,7 @@ async function sendMessage() {
             });
           })
           .catch(err => {
-            console.log(err);
+            if (debug) console.log(err);
             sendMessage();
           });
       });
@@ -145,6 +171,7 @@ async function sendMessage() {
   }
 }
 
+// setup the bot to run as soon as everything is ready
 discordClient.on("ready", () => {
   discordClient.on("message", async msg => {
     var lowerMessage = msg.content.toLowerCase();
@@ -153,7 +180,7 @@ discordClient.on("ready", () => {
     var startsWithNothing = lowerMessage.startsWith("? ");
 
     if (startsWithSay || startsWithS || startsWithNothing) {
-      console.log("Repeating the message...");
+      if (debug) console.log("Repeating the message...");
       queueMessage(msg, startsWithSay, startsWithS);
     } else if (
       msg.content.toLowerCase().startsWith("?voice ") ||
@@ -276,9 +303,10 @@ discordClient.on("ready", () => {
           voiceChoice = "Australian Female";
           break;
       }
-      console.log(
-        `Changing ${msg.member.user.username}'s voice to ${voiceChoice}`
-      );
+      if (debug)
+        console.log(
+          `Changing ${msg.member.user.username}'s voice to ${voiceChoice}`
+        );
 
       msg.channel.sendMessage(
         `Changing ${msg.member.user.username}'s voice to ${voiceChoice}`
@@ -290,7 +318,7 @@ discordClient.on("ready", () => {
         `The number of messages queued is ${messageQueue.length}`
       );
     } else {
-      console.log("Not for me!");
+      if (debug) console.log("Message is not for me!");
     }
   });
 
@@ -298,31 +326,3 @@ discordClient.on("ready", () => {
 });
 
 discordClient.login(token);
-
-// https://discordapp.com/api/oauth2/authorize?client_id=601859499829231677&scope=bot&permissions=1117248
-
-// // cleanup:
-// process.stdin.resume();//so the program will not close instantly
-
-// function exitHandler(options, exitCode) {
-//     if (options.cleanup) {
-//       console.log('clean');
-
-//     }
-
-//     if (exitCode || exitCode === 0) console.log(exitCode);
-//     if (options.exit) process.exit();
-// }
-
-// //do something when app is closing
-// process.on('exit', exitHandler.bind(null,{cleanup:true}));
-
-// //catches ctrl+c event
-// process.on('SIGINT', exitHandler.bind(null, {exit:true}));
-
-// // catches "kill pid" (for example: nodemon restart)
-// process.on('SIGUSR1', exitHandler.bind(null, {exit:true}));
-// process.on('SIGUSR2', exitHandler.bind(null, {exit:true}));
-
-// //catches uncaught exceptions
-// process.on('uncaughtException', exitHandler.bind(null, {exit:true}));
