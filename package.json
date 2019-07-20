@@ -1,0 +1,19 @@
+{
+  "name": "ultimate-message-master",
+  "version": "1.0.0",
+  "description": "Master of messages!  Can be used for many things (we're still learning what)",
+  "main": "bot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node ./bot.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/text-to-speech": "^1.1.2",
+    "audioconcat": "^0.1.3",
+    "config": "^3.2.1",
+    "discord.js": "^11.5.1",
+    "node-opus": "^0.3.2"
+  }
+}
