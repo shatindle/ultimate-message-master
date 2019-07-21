@@ -3,7 +3,6 @@ const textToSpeech = require("@google-cloud/text-to-speech");
 const config = require("config");
 const fs = require("fs");
 const util = require("util");
-const process = require("process");
 const audioconcat = require("audioconcat");
 
 // required files:
@@ -28,6 +27,7 @@ const token = config.get("token");
 const projectId = config.get("project_id");
 const keyFilename = config.get("google_config_path");
 const debug = config.get("debug");
+const channelName = config.get("channel");
 
 // the connection to Google for Text-to-Speech
 const ttsClient = new textToSpeech.TextToSpeechClient({
@@ -107,7 +107,7 @@ function queueMessage(msg, startsWithSay, startsWithS) {
     messageToSend = msg.content.substr(2);
   }
 
-  if (debug) console.log(messageQueue.length);
+  if (debug) console.log(`Messages ahead of this one: ${messageQueue.length}`);
 
   if (messageQueue.length + 1 > 10) {
     msg.channel.sendMessage("The message queue is full.  Please wait a bit.");
@@ -124,7 +124,9 @@ function queueMessage(msg, startsWithSay, startsWithS) {
 async function sendMessage() {
   /// <summary>Loops through the queue of messages and sends them one at a time</summary>
   if (messageQueue.length > 0) {
-    const voiceChannel = discordClient.channels.find("name", "VC 2");
+    const voiceChannel = discordClient.channels.find(
+      c => c.name === channelName
+    );
 
     var message = messageQueue.shift();
 
@@ -315,7 +317,7 @@ discordClient.on("ready", () => {
       while (messageQueue.length > 0) messageQueue.pop();
     } else if (msg.content.toLowerCase() === "?queued") {
       msg.channel.sendMessage(
-        `The number of messages queued is ${messageQueue.length}`
+        `The number of messages queued is ${messageQueue.length + 1}`
       );
     } else {
       if (debug) console.log("Message is not for me!");
@@ -325,4 +327,5 @@ discordClient.on("ready", () => {
   sendMessage();
 });
 
+console.log("LOGGING ON");
 discordClient.login(token);
