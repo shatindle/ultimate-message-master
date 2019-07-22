@@ -36,7 +36,7 @@ const voices = {
 };
 
 function languageList() {
-  return ["American", "European", "Australian", "French", "German", "Japanese"];
+  return ["American", "European", "Australian", "French", "German", "Spanish"];
 }
 
 function subOutString(baseString, subString) {
