@@ -39,14 +39,14 @@ function languageList() {
   return ["American", "European", "Australian", "French", "German", "Spanish"];
 }
 
-function subOutString(baseString, subString) {
+function subOutString(baseString = "", subString = "") {
   return baseString
     .replace(subString, "")
     .replace(/\s\s+/g, " ")
     .trim();
 }
 
-function voiceChoiceService(message) {
+function voiceChoiceService(message = "") {
   let lowercaseMessage = message.toLowerCase();
   let languageMessage;
   let gender;
@@ -100,7 +100,7 @@ function voiceChoiceService(message) {
   };
 }
 
-function simpleName(languageChoice) {
+function simpleName(languageChoice = "") {
   return languageChoice === australianVoice
     ? "Australian"
     : languageChoice === americanVoice

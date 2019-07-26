@@ -3,6 +3,7 @@ const config = require("config");
 const fs = require("fs");
 const util = require("util");
 const audioconcat = require("audioconcat");
+const Discord = require("discord.js");
 
 const projectId = config.get("project_id");
 const keyFilename = config.get("google_config_path");
@@ -20,12 +21,11 @@ const ttsClient = new textToSpeech.TextToSpeechClient({
 const messageQueue = [];
 
 function queueMessage(
-  debug,
-  userList,
-  msg,
-  channelName,
-  startsWithSay,
-  startsWithS
+  debug = false,
+  userList = {},
+  msg = new Discord.Message(),
+  messageToSend = "",
+  connection = new Discord.VoiceConnection()
 ) {
   /// <summary>Queues a message that will be read out loud</summary>
   if (debug) console.log("Message: " + msg.content);
@@ -39,16 +39,6 @@ function queueMessage(
       `Language name: ${voiceChoice.name} Gender: ${voiceChoice.gender}`
     );
 
-  var messageToSend;
-
-  if (startsWithSay) {
-    messageToSend = msg.content.substr(5);
-  } else if (startsWithS) {
-    messageToSend = msg.content.substr(3);
-  } else {
-    messageToSend = msg.content.substr(2);
-  }
-
   if (debug) console.log(`Messages ahead of this one: ${messageQueue.length}`);
 
   if (messageQueue.length + 1 > 10) {
@@ -60,7 +50,7 @@ function queueMessage(
     msg: msg,
     messageToSend: messageToSend,
     voiceChoice: voiceChoice,
-    channelName: channelName
+    connection: connection
   });
 }
 
@@ -68,10 +58,6 @@ async function sendMessage() {
   /// <summary>Loops through the queue of messages and sends them one at a time</summary>
   if (messageQueue.length > 0) {
     var message = messageQueue.shift();
-
-    const voiceChannel = discordClient.channels.find(
-      c => c.name === message.channelName
-    );
 
     var messageToSend = message.messageToSend;
     var msg = message.msg;
@@ -95,20 +81,14 @@ async function sendMessage() {
     audioconcat(["./audio/user-text.mp3", "./audio/blank.mp3"])
       .concat("./audio/message.mp3")
       .on("end", function(output) {
-        voiceChannel
-          .join()
-          .then(connection => {
-            const dispatcher = connection.playFile("./audio/message.mp3");
+        var dispatcher = message.connection.playFile("./audio/message.mp3");
 
-            dispatcher.on("end", end => {
-              voiceChannel.leave();
-
-              sendMessage();
-            });
-          })
-          .catch(err => {
-            if (debug) console.log(err);
+        dispatcher
+          .on("end", end => {
             sendMessage();
+          })
+          .on("error", error => {
+            console.log(`What went wrong? This: ${error}`);
           });
       });
   } else {
@@ -117,20 +97,34 @@ async function sendMessage() {
 }
 
 function clearQueue() {
+  /// <summary>Remove everything from the queue</summary>
   while (messageQueue.length > 0) messageQueue.pop();
 }
 
 function queuedMessages() {
+  /// <summary>Gets the number of messages that are queued up</summary>
   return messageQueue.length;
+}
+
+function joinVoice(channelName = "") {
+  const voiceChannel = discordClient.channels.find(c => c.name === channelName);
+
+  voiceChannel.join().then(connection => {
+    connection.disconnect();
+
+    voiceChannel.join();
+  });
 }
 
 module.exports = {
   queueMessage: queueMessage,
-  init: function(useDebug, useDiscordClient) {
+  init: function(useDebug, useDiscordClient, channelName) {
     debug = useDebug;
     discordClient = useDiscordClient;
+    joinVoice(channelName);
     sendMessage();
   },
   clearQueue: clearQueue,
-  count: queuedMessages
+  count: queuedMessages,
+  joinVoice: joinVoice
 };

@@ -2,6 +2,7 @@ const Discord = require("discord.js");
 const config = require("config");
 const voiceChoiceService = require("./services/voiceChoice");
 const convertTextToVoice = require("./services/convertTextToVoice");
+const commandFilter = require("./services/commandFilter");
 
 // required files:
 /*
@@ -31,74 +32,96 @@ var userList = {};
 // setup the bot to run as soon as everything is ready
 discordClient.on("ready", () => {
   discordClient.on("message", async msg => {
-    var lowerMessage = msg.content.toLowerCase();
-    var startsWithSay = lowerMessage.startsWith("?say ");
-    var startsWithS = lowerMessage.startsWith("?s ");
-    var startsWithNothing = lowerMessage.startsWith("? ");
+    var commandDetails = commandFilter(msg.content);
 
-    if (startsWithSay || startsWithS || startsWithNothing) {
-      if (debug) console.log("Repeating the message...");
-      convertTextToVoice.queueMessage(
-        debug,
-        userList,
-        msg,
-        channelName,
-        startsWithSay,
-        startsWithS
-      );
-    } else if (
-      msg.content.toLowerCase().startsWith("?voice ") ||
-      msg.content.toLowerCase().startsWith("?v ")
-    ) {
-      var voiceText = msg.content.toLowerCase().startsWith("?voice ")
-        ? msg.content.substr(7).toLowerCase()
-        : msg.content.substr(3).toLowerCase();
+    if (debug) console.log(`Executing command ${commandDetails.command}`);
 
-      userList[msg.member.user.id] = voiceChoiceService.voiceChoice(voiceText);
+    switch (commandDetails.command) {
+      // the user would like to talk to the voice chat
+      case "say":
+        convertTextToVoice.queueMessage(
+          debug,
+          userList,
+          msg,
+          commandDetails.message,
+          discordClient.voiceConnections.first()
+        );
+        break;
+      // the user wants to set their voice
+      case "setVoice":
+        userList[msg.member.user.id] = voiceChoiceService.voiceChoice(
+          commandDetails.message
+        );
 
-      const logMessage = `Changing ${msg.member.user.username}#${
-        msg.member.user.discriminator
-      }'s voice to ${userList[msg.member.user.id].simpleName} ${userList[
-        msg.member.user.id
-      ].gender.toLowerCase()}`;
-
-      if (debug) {
-        console.log(logMessage);
-      }
-
-      msg.channel.sendMessage(logMessage);
-    } else if (msg.content.toLowerCase() === "?clear") {
-      convertTextToVoice.clearQueue();
-    } else if (msg.content.toLowerCase() === "?queued") {
-      msg.channel.sendMessage(
-        `The number of messages queued is ${convertTextToVoice.count()}`
-      );
-    } else if (msg.content.toLowerCase() === "?list") {
-      msg.channel.sendMessage(
-        `The options for languages are: \n${voiceChoiceService
-          .languageList()
-          .join("\n")}`
-      );
-    } else if (msg.content.toLowerCase() === "?current") {
-      var voiceChoice = userList[msg.member.user.id]
-        ? userList[msg.member.user.id]
-        : {
-            name: "en-AU",
-            gender: "FEMALE",
-            simpleName: "Australian (Default)"
-          };
-
-      msg.channel.sendMessage(
-        `The voice of ${msg.member.user.username}#${
+        const logMessage = `Changing ${msg.member.user.username}#${
           msg.member.user.discriminator
-        } is ${voiceChoice.simpleName} ${voiceChoice.gender.toLowerCase()}`
-      );
-    } else {
-      if (debug) console.log("Message is not for me!");
+        }'s voice to ${userList[msg.member.user.id].simpleName} ${userList[
+          msg.member.user.id
+        ].gender.toLowerCase()}`;
+
+        if (debug) {
+          console.log(logMessage);
+        }
+
+        msg.channel.sendMessage(logMessage);
+        break;
+      // the user wants to know what languages are supported
+      case "list":
+        msg.channel.sendMessage(
+          `The options for languages are: \n${voiceChoiceService
+            .languageList()
+            .join("\n")}`
+        );
+        break;
+      // clear all the messages currently queued up (this will not stop the current one)
+      case "clear":
+        convertTextToVoice.clearQueue();
+        break;
+      // cancel the current message and clear the queue
+      case "stop":
+        // TODO: cancel the current message
+        convertTextToVoice.clearQueue();
+        break;
+      case "queue":
+        msg.channel.sendMessage(
+          `The number of messages queued is ${convertTextToVoice.count()}`
+        );
+        break;
+      // tell the user what their current voice and gender is
+      case "current":
+        var voiceChoice = userList[msg.member.user.id]
+          ? userList[msg.member.user.id]
+          : {
+              name: "en-AU",
+              gender: "FEMALE",
+              simpleName: "Australian (Default)"
+            };
+
+        msg.channel.sendMessage(
+          `The voice of ${msg.member.user.username}#${
+            msg.member.user.discriminator
+          } is ${voiceChoice.simpleName} ${voiceChoice.gender.toLowerCase()}`
+        );
+        break;
+      case "rejoin":
+        convertTextToVoice.joinVoice(channelName);
+        break;
+      // display help info for how to use this bot
+      case "help":
+
+      // meow at the listeners
+      case "meow":
+
+      // bark at the users
+      case "bark":
+
+      default:
+        if (debug) console.log("Message is not for me!");
+        break;
     }
   });
 
-  convertTextToVoice.init(debug, discordClient);
+  convertTextToVoice.init(debug, discordClient, channelName);
 });
 
 console.log("Logging onto Discord");
