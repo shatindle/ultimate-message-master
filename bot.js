@@ -25,6 +25,7 @@ const discordClient = new Discord.Client();
 const token = config.get("token");
 const debug = config.get("debug");
 const channelName = config.get("channel");
+const textChannelName = config.get("text_channel");
 
 // users who have used the bot since it last booted up
 var userList = {};
@@ -32,6 +33,12 @@ var userList = {};
 // setup the bot to run as soon as everything is ready
 discordClient.on("ready", () => {
   discordClient.on("message", async msg => {
+    if (
+      msg.channel.name !== textChannelName ||
+      msg.member.id === discordClient.user.id
+    )
+      return;
+
     var commandDetails = commandFilter(msg.content);
 
     if (debug) console.log(`Executing command ${commandDetails.command}`);

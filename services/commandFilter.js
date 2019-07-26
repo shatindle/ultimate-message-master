@@ -2,11 +2,11 @@ function commandFilter(message = "") {
   /// <summary>Figure out what the user wants to do and separate that from the message</summary>
   var lowercaseMessage = message.toLowerCase();
 
-  if (lowercaseMessage.startsWith("? "))
-    return {
-      command: "say",
-      message: message.substr("? ".length)
-    };
+  // if (lowercaseMessage.startsWith("? "))
+  //   return {
+  //     command: "say",
+  //     message: message.substr("? ".length)
+  //   };
 
   if (lowercaseMessage.startsWith("?v "))
     return {
@@ -67,7 +67,8 @@ function commandFilter(message = "") {
     };
 
   return {
-    command: "nothing"
+    command: "say",
+    message: message
   };
 }
 
