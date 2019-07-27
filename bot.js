@@ -120,7 +120,7 @@ discordClient.on("ready", () => {
       case "follow":
         convertVoiceToText.followUser(msg.member.id);
         msg.channel.sendMessage(
-          `Talk to me, ${msg.member.user.username}#${
+          `Talk dirty to me, ${msg.member.user.username}#${
             msg.member.user.discriminator
           }, you sexy, sexy beast...`
         );
