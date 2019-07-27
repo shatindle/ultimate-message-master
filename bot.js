@@ -2,6 +2,7 @@ const Discord = require("discord.js");
 const config = require("config");
 const voiceChoiceService = require("./services/voiceChoice");
 const convertTextToVoice = require("./services/convertTextToVoice");
+const convertVoiceToText = require("./services/convertVoiceToText");
 const commandFilter = require("./services/commandFilter");
 
 // required files:
@@ -34,6 +35,7 @@ var userList = {};
 discordClient.on("ready", () => {
   discordClient.on("message", async msg => {
     if (
+      // @ts-ignore
       msg.channel.name !== textChannelName ||
       msg.member.id === discordClient.user.id
     )
@@ -111,7 +113,25 @@ discordClient.on("ready", () => {
         );
         break;
       case "rejoin":
-        convertTextToVoice.joinVoice(channelName);
+        convertTextToVoice.joinVoice(channelName, [
+          convertVoiceToText.updateConnection
+        ]);
+        break;
+      case "follow":
+        convertVoiceToText.followUser(msg.member.id);
+        msg.channel.sendMessage(
+          `Talk to me, ${msg.member.user.username}#${
+            msg.member.user.discriminator
+          }, you sexy, sexy beast...`
+        );
+        break;
+      case "unfollow":
+        convertVoiceToText.unFollowUser(msg.member.id);
+        msg.channel.sendMessage(
+          `Now ignoring whatever ${msg.member.user.username}#${
+            msg.member.user.discriminator
+          } says.  Screw them.`
+        );
         break;
       // display help info for how to use this bot
       case "help":
@@ -128,7 +148,10 @@ discordClient.on("ready", () => {
     }
   });
 
-  convertTextToVoice.init(debug, discordClient, channelName);
+  convertVoiceToText.init(debug, discordClient, textChannelName);
+  convertTextToVoice.init(debug, discordClient, channelName, [
+    convertVoiceToText.updateConnection
+  ]);
 });
 
 console.log("Logging onto Discord");

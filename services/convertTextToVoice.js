@@ -42,7 +42,7 @@ function queueMessage(
   if (debug) console.log(`Messages ahead of this one: ${messageQueue.length}`);
 
   if (messageQueue.length + 1 > 10) {
-    msg.channel.sendMessage("The message queue is full.  Please wait a bit.");
+    msg.channel.send("The message queue is full.  Please wait a bit.");
     return;
   }
 
@@ -106,22 +106,39 @@ function queuedMessages() {
   return messageQueue.length;
 }
 
-function joinVoice(channelName = "") {
+function joinVoice(channelName = "", callback = []) {
   const voiceChannel = discordClient.channels.find(c => c.name === channelName);
 
   voiceChannel.join().then(connection => {
     connection.disconnect();
 
-    voiceChannel.join();
+    voiceChannel.join().then(c => {
+      var dispatcher = c.playFile("./audio/blank.mp3");
+
+      dispatcher
+        .on("end", end => {
+          sendMessage();
+        })
+        .on("error", error => {
+          console.log(`What went wrong? This: ${error}`);
+        });
+
+      callback.map((f, i) => f(c));
+    });
   });
 }
 
 module.exports = {
   queueMessage: queueMessage,
-  init: function(useDebug, useDiscordClient, channelName) {
+  init: function(
+    useDebug,
+    useDiscordClient,
+    channelName,
+    joinVoiceCallback = []
+  ) {
     debug = useDebug;
     discordClient = useDiscordClient;
-    joinVoice(channelName);
+    joinVoice(channelName, joinVoiceCallback);
     sendMessage();
   },
   clearQueue: clearQueue,

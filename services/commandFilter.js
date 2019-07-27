@@ -42,6 +42,16 @@ function commandFilter(message = "") {
       command: "rejoin"
     };
 
+  if (lowercaseMessage.startsWith("?follow"))
+    return {
+      command: "follow"
+    };
+
+  if (lowercaseMessage.startsWith("?unfollow"))
+    return {
+      command: "unfollow"
+    };
+
   // TODO: implement
   if (lowercaseMessage.startsWith("?help"))
     return {
