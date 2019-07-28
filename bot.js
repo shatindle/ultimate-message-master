@@ -4,6 +4,8 @@ const voiceChoiceService = require("./services/voiceChoice");
 const convertTextToVoice = require("./services/convertTextToVoice");
 const convertVoiceToText = require("./services/convertVoiceToText");
 const commandFilter = require("./services/commandFilter");
+const metrics = require("./services/metrics");
+const datastore = require("./services/datastore");
 
 // required files:
 /*
@@ -31,8 +33,32 @@ const textChannelName = config.get("text_channel");
 // users who have used the bot since it last booted up
 var userList = {};
 
+// helper for auto-rejoining VC
+function joinVoice(channelName = "", callback = []) {
+  // @ts-ignore
+  const voiceChannel = discordClient.channels.find(c => c.name === channelName);
+
+  // @ts-ignore
+  voiceChannel.join().then(connection => {
+    connection.disconnect();
+
+    // @ts-ignore
+    voiceChannel.join().then(c => {
+      var dispatcher = c.playFile("./audio/blank.mp3");
+
+      dispatcher
+        .on("end", end => {
+          callback.map((f, i) => f(c));
+        })
+        .on("error", error => {
+          metrics(`What went wrong? This: ${error}`);
+        });
+    });
+  });
+}
+
 // setup the bot to run as soon as everything is ready
-discordClient.on("ready", () => {
+discordClient.on("ready", async () => {
   discordClient.on("message", async msg => {
     if (
       // @ts-ignore
@@ -43,7 +69,7 @@ discordClient.on("ready", () => {
 
     var commandDetails = commandFilter(msg.content);
 
-    if (debug) console.log(`Executing command ${commandDetails.command}`);
+    if (debug) metrics(`Executing command ${commandDetails.command}`);
 
     switch (commandDetails.command) {
       // the user would like to talk to the voice chat
@@ -58,7 +84,8 @@ discordClient.on("ready", () => {
         break;
       // the user wants to set their voice
       case "setVoice":
-        userList[msg.member.user.id] = voiceChoiceService.voiceChoice(
+        userList[msg.member.user.id] = await voiceChoiceService.voiceChoice(
+          msg.member.id,
           commandDetails.message
         );
 
@@ -69,7 +96,7 @@ discordClient.on("ready", () => {
         ].gender.toLowerCase()}`;
 
         if (debug) {
-          console.log(logMessage);
+          metrics(logMessage);
         }
 
         msg.channel.sendMessage(logMessage);
@@ -88,8 +115,7 @@ discordClient.on("ready", () => {
         break;
       // cancel the current message and clear the queue
       case "stop":
-        // TODO: cancel the current message
-        convertTextToVoice.clearQueue();
+        convertTextToVoice.stopQueue();
         break;
       case "queue":
         msg.channel.sendMessage(
@@ -113,25 +139,13 @@ discordClient.on("ready", () => {
         );
         break;
       case "rejoin":
-        convertTextToVoice.joinVoice(channelName, [
-          convertVoiceToText.updateConnection
-        ]);
+        joinVoice(channelName, [convertVoiceToText.updateConnection]);
         break;
       case "follow":
-        convertVoiceToText.followUser(msg.member.id);
-        msg.channel.sendMessage(
-          `Talk dirty to me, ${msg.member.user.username}#${
-            msg.member.user.discriminator
-          }, you sexy, sexy beast...`
-        );
+        convertVoiceToText.followUser(msg);
         break;
       case "unfollow":
-        convertVoiceToText.unFollowUser(msg.member.id);
-        msg.channel.sendMessage(
-          `Now ignoring whatever ${msg.member.user.username}#${
-            msg.member.user.discriminator
-          } says.  Screw them.`
-        );
+        convertVoiceToText.unFollowUser(msg);
         break;
       // display help info for how to use this bot
       case "help":
@@ -143,16 +157,37 @@ discordClient.on("ready", () => {
       case "bark":
 
       default:
-        if (debug) console.log("Message is not for me!");
+        if (debug) metrics("Message is not for me!");
         break;
     }
   });
 
-  convertVoiceToText.init(debug, discordClient, textChannelName);
-  convertTextToVoice.init(debug, discordClient, channelName, [
-    convertVoiceToText.updateConnection
-  ]);
+  datastore.init(debug);
+
+  var savedUsers = await datastore.listUserPreferences();
+
+  savedUsers
+    .map(c => {
+      return {
+        userId: c.UserId,
+        name: c.language,
+        gender: c.gender,
+        simpleName: c.simpleLanguageName
+      };
+    })
+    .forEach(value => {
+      userList[value.userId] = value;
+    });
+
+  convertVoiceToText.init(
+    debug,
+    discordClient,
+    textChannelName,
+    savedUsers.filter(v => v.follow).map(v => v.UserId)
+  );
+  convertTextToVoice.init(debug, discordClient, channelName);
+  joinVoice(channelName, [convertVoiceToText.updateConnection]);
 });
 
-console.log("Logging onto Discord");
+metrics("Logging onto Discord");
 discordClient.login(token);

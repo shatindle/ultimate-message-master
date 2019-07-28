@@ -4,6 +4,7 @@ const fs = require("fs");
 const util = require("util");
 const audioconcat = require("audioconcat");
 const Discord = require("discord.js");
+const metrics = require("./metrics");
 
 const projectId = config.get("project_id");
 const keyFilename = config.get("google_config_path");
@@ -54,10 +55,20 @@ function queueMessage(
   });
 }
 
+var dispatcher;
+
 async function sendMessage() {
   /// <summary>Loops through the queue of messages and sends them one at a time</summary>
   if (messageQueue.length > 0) {
-    var message = messageQueue.shift();
+    const message = messageQueue.shift();
+
+    if (message.connection.channel.members.size < 2) {
+      setImmediate(sendMessage);
+      return;
+    }
+
+    if (debug)
+      metrics("getting google voice stream for message id " + message.msg.id);
 
     var messageToSend = message.messageToSend;
     var msg = message.msg;
@@ -78,21 +89,35 @@ async function sendMessage() {
     const writeFile = util.promisify(fs.writeFile);
     await writeFile("./audio/user-text.mp3", response.audioContent, "binary");
 
+    if (debug)
+      metrics("adding empty sound to the end for message id " + message.msg.id);
+
     audioconcat(["./audio/user-text.mp3", "./audio/blank.mp3"])
       .concat("./audio/message.mp3")
       .on("end", function(output) {
-        var dispatcher = message.connection.playFile("./audio/message.mp3");
+        if (debug) metrics("streaming audio for message id " + message.msg.id);
+
+        message.msg.react("🔊");
+
+        dispatcher = message.connection.playFile("./audio/message.mp3");
 
         dispatcher
           .on("end", end => {
-            sendMessage();
+            if (debug)
+              metrics("audio complete for message id " + message.msg.id);
+
+            var reaction = message.msg.reactions.find(c => c.me);
+            if (reaction) reaction.remove();
+
+            setImmediate(sendMessage);
           })
           .on("error", error => {
             console.log(`What went wrong? This: ${error}`);
+            setImmediate(sendMessage);
           });
       });
   } else {
-    setTimeout(sendMessage, 500);
+    setImmediate(sendMessage);
   }
 }
 
@@ -106,42 +131,19 @@ function queuedMessages() {
   return messageQueue.length;
 }
 
-function joinVoice(channelName = "", callback = []) {
-  const voiceChannel = discordClient.channels.find(c => c.name === channelName);
-
-  voiceChannel.join().then(connection => {
-    connection.disconnect();
-
-    voiceChannel.join().then(c => {
-      var dispatcher = c.playFile("./audio/blank.mp3");
-
-      dispatcher
-        .on("end", end => {
-          sendMessage();
-        })
-        .on("error", error => {
-          console.log(`What went wrong? This: ${error}`);
-        });
-
-      callback.map((f, i) => f(c));
-    });
-  });
+function stopQueue() {
+  clearQueue();
+  dispatcher.end();
 }
 
 module.exports = {
   queueMessage: queueMessage,
-  init: function(
-    useDebug,
-    useDiscordClient,
-    channelName,
-    joinVoiceCallback = []
-  ) {
+  init: function(useDebug, useDiscordClient, channelName) {
     debug = useDebug;
     discordClient = useDiscordClient;
-    joinVoice(channelName, joinVoiceCallback);
     sendMessage();
   },
   clearQueue: clearQueue,
-  count: queuedMessages,
-  joinVoice: joinVoice
+  stopQueue: stopQueue,
+  count: queuedMessages
 };

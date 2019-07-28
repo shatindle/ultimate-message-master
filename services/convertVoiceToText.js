@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const Discord = require("discord.js");
 const { Transform } = require("stream");
+const datastore = require("./datastore");
 
 const projectId = config.get("project_id");
 const keyFilename = config.get("google_config_path");
@@ -43,12 +44,48 @@ class ConvertTo1ChannelStream extends Transform {
 
 var users = [];
 
-function followUser(userId = "") {
-  if (!users.includes(userId)) users.push(userId);
+const follows = [
+  "Talk dirty to me, {0}, you sexy, sexy beast...",
+  "Go ahead, {0}, I'm listening...",
+  "I'm a bot, {0}, not a doctor.  But go ahead...",
+  "Yes... That's it, {0}... Go on..."
+];
+
+const unfollows = [
+  "Now ignoring whatever {0} says.  Screw them.",
+  "{0} only says NSFW things, so I'm going to stop listening to them now.",
+  "I HAVE EVALUATED {0}, AND I HAVE FOUND YOU UNWORTHY.",
+  "Quite frankly, {0}, I don't give a damn."
+];
+
+function followUser(msg = new Discord.Message()) {
+  if (!users.includes(msg.member.id)) {
+    users.push(msg.member.id);
+
+    datastore.updateUserPreference(msg.member.id, "follow", true);
+
+    var reply = follows[Math.floor(Math.random() * follows.length)].replace(
+      "{0}",
+      `${msg.member.user.username}#${msg.member.user.discriminator}`
+    );
+
+    msg.channel.sendMessage(reply);
+  }
 }
 
-function unFollowUser(userId = "") {
-  if (users.includes(userId)) users.splice(users.indexOf(userId), 1);
+function unFollowUser(msg = new Discord.Message()) {
+  if (users.includes(msg.member.id)) {
+    users.splice(users.indexOf(msg.member.id), 1);
+
+    datastore.updateUserPreference(msg.member.id, "follow", false);
+
+    var reply = unfollows[Math.floor(Math.random() * unfollows.length)].replace(
+      "{0}",
+      `${msg.member.user.username}#${msg.member.user.discriminator}`
+    );
+
+    msg.channel.sendMessage(reply);
+  }
 }
 
 function updateConnection(connection = new Discord.VoiceConnection()) {
@@ -97,10 +134,13 @@ function updateConnection(connection = new Discord.VoiceConnection()) {
 }
 
 module.exports = {
-  init: function(useDebug, useDiscordClient, channelName) {
+  init: function(useDebug, useDiscordClient, channelName, userList) {
     debug = useDebug;
     discordClient = useDiscordClient;
     textChannel = channelName;
+
+    users = userList;
+    console.dir(users);
   },
   followUser: followUser,
   unFollowUser: unFollowUser,

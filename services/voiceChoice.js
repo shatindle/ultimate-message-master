@@ -1,3 +1,5 @@
+const datastore = require("./datastore");
+
 const australianVoice = "en-AU";
 const britishVoice = "en-GB";
 const americanVoice = "en-US";
@@ -46,7 +48,7 @@ function subOutString(baseString = "", subString = "") {
     .trim();
 }
 
-function voiceChoiceService(message = "") {
+async function voiceChoiceService(userId = "", message = "") {
   let lowercaseMessage = message.toLowerCase();
   let languageMessage;
   let gender;
@@ -92,6 +94,15 @@ function voiceChoiceService(message = "") {
   } else {
     languageChoice = australianVoice;
   }
+
+  // save the user's preferences
+  await datastore.updateUserPreference(userId, "language", languageChoice);
+  await datastore.updateUserPreference(userId, "gender", gender.toUpperCase());
+  await datastore.updateUserPreference(
+    userId,
+    "simpleLanguageName",
+    simpleName(languageChoice)
+  );
 
   return {
     name: languageChoice,
