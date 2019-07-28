@@ -102,6 +102,9 @@ async function sendMessage() {
         dispatcher = message.connection.playFile("./audio/message.mp3");
 
         dispatcher
+          .on("start", () => {
+            message.connection.player.streamingData.pausedTime = 0;
+          })
           .on("end", end => {
             if (debug)
               metrics("audio complete for message id " + message.msg.id);
