@@ -53,7 +53,7 @@ function joinVoice(channelName = "", callback = []) {
               c.player.streamingData.pausedTime = 0;
             })
           .on("end", end => {
-            setImmediate(callback.map((f, i) => f(c)));
+            setImmediate(() => callback.map((f, i) => f(c)));
           })
           .on("error", error => {
             metrics(`What went wrong? This: ${error}`);
