@@ -44,15 +44,22 @@ function joinVoice(channelName = "", callback = []) {
 
     // @ts-ignore
     voiceChannel.join().then(c => {
-      var dispatcher = c.playFile("./audio/blank.mp3");
+      
+      setTimeout(() => {
+        var dispatcher = c.playFile("./audio/blank.mp3");
 
-      dispatcher
-        .on("end", end => {
-          callback.map((f, i) => f(c));
-        })
-        .on("error", error => {
-          metrics(`What went wrong? This: ${error}`);
-        });
+        dispatcher
+          .on("start", () => {
+              c.player.streamingData.pausedTime = 0;
+            })
+          .on("end", end => {
+            setImmediate(callback.map((f, i) => f(c)));
+          })
+          .on("error", error => {
+            metrics(`What went wrong? This: ${error}`);
+          });
+      }, 100);
+      
     });
   });
 }
