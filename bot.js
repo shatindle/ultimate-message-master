@@ -183,7 +183,8 @@ discordClient.on("ready", async () => {
       };
     })
     .forEach(value => {
-      userList[value.userId] = value;
+      if (value.language)
+        userList[value.userId] = value;
     });
 
   convertVoiceToText.init(
