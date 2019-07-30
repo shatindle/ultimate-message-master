@@ -139,7 +139,7 @@ module.exports = {
     discordClient = useDiscordClient;
     textChannel = channelName;
 
-    userList.forEach((l) => users.push(l);
+    userList.forEach((l) => users.push(l));
     console.dir(users);
   },
   followUser: followUser,
