@@ -46,7 +46,7 @@ function joinVoice(channelName = "", callback = []) {
     voiceChannel.join().then(c => {
       
       setTimeout(() => {
-        var dispatcher = c.playFile("./audio/blank.mp3");
+        var dispatcher = c.playFile("./audio/meow.mp3");
 
         dispatcher
           .on("start", () => {
