@@ -3,6 +3,7 @@ const config = require("config");
 const voiceChoiceService = require("./services/voiceChoice");
 const convertTextToVoice = require("./services/convertTextToVoice");
 const convertVoiceToText = require("./services/convertVoiceToText");
+const getTextFromFiles = require("./services/imageToText");
 const commandFilter = require("./services/commandFilter");
 const metrics = require("./services/metrics");
 const datastore = require("./services/datastore");
@@ -44,14 +45,13 @@ function joinVoice(channelName = "", callback = []) {
 
     // @ts-ignore
     voiceChannel.join().then(c => {
-      
       setTimeout(() => {
         var dispatcher = c.playFile("./audio/meow.mp3");
 
         dispatcher
           .on("start", () => {
-              c.player.streamingData.pausedTime = 0;
-            })
+            c.player.streamingData.pausedTime = 0;
+          })
           .on("end", end => {
             setImmediate(() => callback.map((f, i) => f(c)));
           })
@@ -59,7 +59,6 @@ function joinVoice(channelName = "", callback = []) {
             metrics(`What went wrong? This: ${error}`);
           });
       }, 100);
-      
     });
   });
 }
@@ -79,6 +78,10 @@ discordClient.on("ready", async () => {
     if (debug) metrics(`Executing command ${commandDetails.command}`);
 
     switch (commandDetails.command) {
+      case "score":
+        console.log("Attempting scoring...");
+        getTextFromFiles(msg);
+        break;
       // the user would like to talk to the voice chat
       case "say":
         convertTextToVoice.queueMessage(
@@ -183,8 +186,7 @@ discordClient.on("ready", async () => {
       };
     })
     .forEach(value => {
-      if (value.language)
-        userList[value.userId] = value;
+      if (value.name) userList[value.userId] = value;
     });
 
   convertVoiceToText.init(
