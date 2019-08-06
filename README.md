@@ -37,6 +37,11 @@ Tell the bot to transcribe everything you say in the voice chat the bot monitors
 #### ?unfollow
 Tell the bot to stop transcribing everything you say in the voice chat the bot monitors.
 
+### Image-to-Text Commands
+
+#### ?score &lt;attachment&gt;
+Experimental command for parsing and interpreting battle scores from the NSO Splatnet Battles screen.
+
 ### Commands to be implemented
 
 #### ?help
