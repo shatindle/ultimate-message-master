@@ -76,6 +76,11 @@ function commandFilter(message = "") {
       command: "stop"
     };
 
+  if (lowercaseMessage.startsWith("?score"))
+    return {
+      command: "score"
+    };
+
   return {
     command: "say",
     message: message
