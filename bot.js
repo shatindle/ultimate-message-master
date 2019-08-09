@@ -7,6 +7,7 @@ const getTextFromFiles = require("./services/imageToText");
 const commandFilter = require("./services/commandFilter");
 const metrics = require("./services/metrics");
 const datastore = require("./services/datastore");
+const help = require("./services/help");
 
 // required files:
 /*
@@ -128,7 +129,7 @@ discordClient.on("ready", async () => {
         convertTextToVoice.stopQueue();
         break;
       case "queue":
-        msg.channel.sendMessage(
+        msg.channel.send(
           `The number of messages queued is ${convertTextToVoice.count()}`
         );
         break;
@@ -142,7 +143,7 @@ discordClient.on("ready", async () => {
               simpleName: "Australian (Default)"
             };
 
-        msg.channel.sendMessage(
+        msg.channel.send(
           `The voice of ${msg.member.user.username}#${
             msg.member.user.discriminator
           } is ${voiceChoice.simpleName} ${voiceChoice.gender.toLowerCase()}`
@@ -159,7 +160,7 @@ discordClient.on("ready", async () => {
         break;
       // display help info for how to use this bot
       case "help":
-
+        help(msg.channel);
       // meow at the listeners
       case "meow":
 
