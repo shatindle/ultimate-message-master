@@ -52,7 +52,6 @@ function commandFilter(message = "") {
       command: "unfollow"
     };
 
-  // TODO: implement
   if (lowercaseMessage.startsWith("?help"))
     return {
       command: "help"
