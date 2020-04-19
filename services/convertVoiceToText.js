@@ -10,6 +10,8 @@ var textChannel;
 // make a new stream for each time someone starts to talk
 function generateOutputFile(fileName) {
 
+  if (debug) console.log("creating write stream");
+
   return fs.createWriteStream(fileName);
 }
 
