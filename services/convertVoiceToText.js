@@ -1,23 +1,17 @@
-const speech = require("@google-cloud/speech");
-const config = require("config");
-const fs = require("fs");
-const path = require("path");
 const Discord = require("discord.js");
 const { Transform } = require("stream");
 const datastore = require("./datastore");
-
-const projectId = config.get("project_id");
-const keyFilename = config.get("google_config_path");
+const fs = require('fs');
 
 var debug = false;
 var discordClient;
 var textChannel;
 
-// Creates a client
-const client = new speech.SpeechClient({
-  projectId,
-  keyFilename
-});
+// make a new stream for each time someone starts to talk
+function generateOutputFile(fileName) {
+
+  return fs.createWriteStream(fileName);
+}
 
 function convertBufferTo1Channel(buffer) {
   /// <summary>Helper function required to translate discord audio to Google's input format</summary>
@@ -97,37 +91,25 @@ function updateConnection(connection = new Discord.VoiceConnection()) {
         console.log(`${user.username}#${user.discriminator} is talking...`);
 
       const audioStream = receiver.createPCMStream(user);
-      const requestConfig = {
-        encoding: "LINEAR16",
-        sampleRateHertz: 48000,
-        languageCode: "en-US"
-      };
-      const request = {
-        config: requestConfig
-      };
-      const recognizeStream = client
-        .streamingRecognize(request)
-        .on("error", console.error)
-        .on("data", response => {
-          const transcription = response.results
-            .map(result => result.alternatives[0].transcript)
-            .join("\n");
 
-          if (debug) console.log(`Transcription: ${transcription}`);
-
-          var username = `**${user.username}#${user.discriminator}**`;
-
-          discordClient.channels
-            .find(c => c.name === textChannel)
-            .send(username + ": \n> " + transcription);
-        });
-
+      // create an output stream so we can dump our data in a file
+      // use IDs instead of username cause some people have stupid emojis in their name
+      const fileName = `./recordings/${channel.id}-${member.id}-${Date.now()}.wav`;
+      const outputStream = generateOutputFile(fileName);
+      // pipe our audio data into the file stream
       const convertTo1ChannelStream = new ConvertTo1ChannelStream();
 
-      audioStream.pipe(convertTo1ChannelStream).pipe(recognizeStream);
+      audioStream.pipe(convertTo1ChannelStream).pipe(outputStream);
+      outputStream.on("data", console.log);
 
-      audioStream.on("end", async () => {
+      var username = `**${user.username}#${user.discriminator}**`;
+
+      outputStream.on("end", async () => {
         if (debug) console.log("audioStream end");
+
+        // discordClient.channels
+        //     .find(c => c.name === textChannel)
+        //     .send(username + ": \n> " + transcription);
       });
     }
   });
