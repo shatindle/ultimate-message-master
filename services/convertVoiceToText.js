@@ -101,7 +101,8 @@ function updateConnection(connection = new Discord.VoiceConnection()) {
       // pipe our audio data into the file stream
       const convertTo1ChannelStream = new ConvertTo1ChannelStream();
 
-      audioStream.pipe(convertTo1ChannelStream).pipe(outputStream);
+      //audioStream.pipe(convertTo1ChannelStream).pipe(outputStream);
+      audioStream.pipe(outputStream);
       outputStream.on("data", console.log);
 
       var username = `**${user.username}#${user.discriminator}**`;
