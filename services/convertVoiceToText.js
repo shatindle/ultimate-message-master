@@ -104,7 +104,7 @@ function updateConnection(connection = new Discord.VoiceConnection()) {
 
       var username = `**${user.username}#${user.discriminator}**`;
 
-      outputStream.on("end", async () => {
+      audioStream.on("end", async () => {
         if (debug) console.log("audioStream end");
 
         // discordClient.channels
